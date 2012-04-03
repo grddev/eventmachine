@@ -17,7 +17,8 @@ module EventMachine
   class Queue
     # Create a new queue
     def initialize
-      @items = []
+      @sink  = []
+      @drain = []
       @popq  = []
     end
 
@@ -27,10 +28,14 @@ module EventMachine
     def pop(*a, &b)
       cb = EM::Callback(*a, &b)
       EM.schedule do
-        if @items.empty?
+        if @drain.empty?
+          @drain = @sink
+          @sink = []
+        end
+        if @drain.empty?
           @popq << cb
         else
-          cb.call @items.shift
+          cb.call @drain.shift
         end
       end
       nil # Always returns nil
@@ -41,8 +46,12 @@ module EventMachine
     # next reactor tick.
     def push(*items)
       EM.schedule do
-        @items.push(*items)
-        @popq.shift.call @items.shift until @items.empty? || @popq.empty?
+        @sink.push(*items)
+        unless @popq.empty?
+          @drain = @sink
+          @sink = []
+          @popq.shift.call @drain.shift until @drain.empty? || @popq.empty?
+        end
       end
     end
     alias :<< :push
@@ -50,13 +59,13 @@ module EventMachine
     # N.B. This is a peek, it's not thread safe, and may only tend toward 
     # accuracy.
     def empty?
-      @items.empty?
+      @drain.empty? && @sink.empty?
     end
 
     # N.B. This is a peek, it's not thread safe, and may only tend toward 
     # accuracy.
     def size
-      @items.size
+      @drain.size + @sink.size
     end
   end
 end
