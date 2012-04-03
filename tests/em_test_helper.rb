@@ -1,4 +1,4 @@
-require 'lib/eventmachine'
+require 'eventmachine'
 require 'test/unit'
 require 'rbconfig'
 require 'socket'
@@ -23,12 +23,12 @@ Test::Unit::TestCase.class_eval do
   end
 
   def next_port
-    @@port ||= 9000
+    $test_port ||= 9000
     begin
-      @@port += 1
-    end while port_in_use?(@@port)
+      $test_port += 1
+    end while port_in_use?($test_port)
 
-    @@port
+    $test_port
   end
 
   def exception_class
